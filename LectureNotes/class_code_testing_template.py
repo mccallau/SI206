@@ -9,7 +9,7 @@ class Student(object):
 		return "{} {}".format(self.first_name,self.last_name) # see the String Formatting chapter in the textbook to learn about this syntax for formatting strings if you are not yet familiar!
 
 	def likely_credits(self):
-		courses_credits = {"SI 206":4, "SI 106":4, "SI 110":4, "ENG 290":3, "HIST 450":3, "HIST 124":4,"LING 210":4,"LING 340":3}
+		courses_credits  = {"SI 206":4, "SI 106":4, "SI 110":4, "ENG 290":3, "HIST 450":3, "HIST 124":4,"LING 210":4,"LING 340":3}
 		likely = 0
 		if "HIST" in self.department.upper():
 			for k in courses_credits.keys():
