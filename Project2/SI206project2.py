@@ -27,7 +27,7 @@ from bs4 import BeautifulSoup
 ## find_urls("the internet is awesome #worldwideweb") should return [], empty list
 
 def find_urls(s):
-    urls = re.findall("http\S*://[a-zA-Z]+[.]\S+",s)
+    urls = re.findall("http[a-zA-Z]*://[a-zA-Z]+[.]\S+",s)
     actualurls=[]
     for url in urls:
         failcount=0
@@ -46,8 +46,12 @@ def find_urls(s):
 def grab_headlines():
     response =requests.get("http://www.michigandaily.com/section/opinion")
     soup = BeautifulSoup(response.text,'lxml')
-    items = soup.find_all("body")[0].find_all("div")[0]
-    print(items)
+    items = soup.find("ol").find_all("li")
+    mostread = []
+    for item in items:
+        item = item.find("a").string
+        mostread.append(item)
+    return mostread
 
 
 
@@ -63,16 +67,31 @@ def grab_headlines():
 ## requests.get(base_url, headers={'User-Agent': 'SI_CLASS'}) 
 
 def get_umsi_data():
-    pass
-    #Your code here
+    broth = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastname_value=&rid=All&page="
+    umsi_titles={}
+    for items in range(13):
+        pagebroth =broth+str(items)
+        response =requests.get(pagebroth,headers={'User-Agent': 'SI_CLASS'})
+        soup = BeautifulSoup(response.text,'lxml')
+        people = soup.find("div",class_="view-content")
+        individuals = soup.find_all("div",re.compile("views-row"))
+        for individual in individuals:
+            namefield = individual.find("div",re.compile("field-name-title"))
+            name = namefield.find("h2")
+            titlefield = individual.find("div",re.compile("field-name-field-person-titles"))
+            title = titlefield.find("div",class_="field-item even")
+            if title==None: umsi_titles[name.string] = " "
+            else: umsi_titles[name.string] = title.string
+    return umsi_titles
 
 ## PART 3 (b) Define a function called num_students.  
 ## INPUT: The dictionary from get_umsi_data().
 ## OUTPUT: Return number of PhD students in the data.  (Don't forget, I may change the input data)
 def num_students(data):
-    pass
-    #Your code here
-
+    phdcount = 0
+    for values in data.values(): 
+    	if values=="PhD student": phdcount+=1
+    return phdcount
 
 
 ########### TESTS; DO NOT CHANGE ANY CODE BELOW THIS LINE! ###########
