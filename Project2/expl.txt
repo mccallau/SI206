@@ -1,0 +1,6 @@
+For problem 2, most read section at the time was different than most read section that was being tested for:
+	- Adjusted code to test opinion.html most read headlines
+	- Opened opinion.html (was receiving unicode error so set default encoder to utf-8, fixed it)
+	- applied the rest of the code to opinion.html that I had made for the live headlines off Michigan Daily Opinions
+	- test passed
+	- reverted code to only reflect live data off Michigan Daily opinions

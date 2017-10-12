@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 def find_urls(s):
     urls = re.findall("http[a-zA-Z]*://[a-zA-Z]+[.]\S+",s)
     actualurls=[]
-    for url in urls:
+    for url in urls: #Checking URLs to ensure each dot is followed by two characters
         failcount=0
         surl=url.split(".")
         for obj in surl:
@@ -46,7 +46,7 @@ def find_urls(s):
 def grab_headlines():
     response =requests.get("http://www.michigandaily.com/section/opinion")
     soup = BeautifulSoup(response.text,'lxml')
-    items = soup.find("ol").find_all("li")
+    items = soup.find("ol").find_all("li") #Each most read headline was under the unique tag ol, then the individual headlines were under li tags
     mostread = []
     for item in items:
         item = item.find("a").string
@@ -69,18 +69,17 @@ def grab_headlines():
 def get_umsi_data():
     broth = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastname_value=&rid=All&page="
     umsi_titles={}
-    for items in range(13):
-        pagebroth =broth+str(items)
+    for items in range(13): #13 total pages of individuals starting at page 0 up to page 12
+        pagebroth =broth+str(items) #appends page number to base URL
         response =requests.get(pagebroth,headers={'User-Agent': 'SI_CLASS'})
         soup = BeautifulSoup(response.text,'lxml')
-        people = soup.find("div",class_="view-content")
         individuals = soup.find_all("div",re.compile("views-row"))
-        for individual in individuals:
+        for individual in individuals: #Breaks down individuals on a page and iterates to pull name and title
             namefield = individual.find("div",re.compile("field-name-title"))
             name = namefield.find("h2")
             titlefield = individual.find("div",re.compile("field-name-field-person-titles"))
             title = titlefield.find("div",class_="field-item even")
-            if title==None: umsi_titles[name.string] = " "
+            if title==None: umsi_titles[name.string] = " " #Some titles are None, replaces them with " "
             else: umsi_titles[name.string] = title.string
     return umsi_titles
 
