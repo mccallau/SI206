@@ -63,7 +63,7 @@ auth.set_access_token(access_token, access_token_secret)
 
 ## Write the rest of your code here!
 
-def cachedat():
+def cachedat(): #Creates and grabs caching dictionary if available
 	cache = {}
 	try:
 		cached = open("twittercache.json",'r')
@@ -73,23 +73,30 @@ def cachedat():
 		pass
 	return cache
 
-def graborcache(userinput):
-	cache = cachedat()
+def graborcache(userinput): #Retrieves user input tweets from cache or fetches from Twitter if not in cache
+	cache = cachedat() #Caching object to add fetched Tweets to
 	if userinput in cache.keys():
-		returnobj = [{userinput: cache[userinput]},"using cache"]
-		return returnobj
-	else:
-		api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
-		result = api.search(q=userinput)
-		tweets = []
-		for tweet in result["statuses"]:
+		print("using cache")
+		tweets=[]
+		for tweet in cache[userinput]['statuses']: #Retrieves 5 most updated tweets from cache including the user input
 			if len(tweets)<5:
 				if userinput in tweet["text"]:
 					tweets.append(tweet)
-		returnobj = [{userinput:tweets},"fetching from Twitter"]
-		cache[userinput]=tweets
+		returnobj = {userinput: tweets}
+		return returnobj
+	else:
+		print("fetching from Twitter")
+		api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
+		tweets = []
+		result = api.search(q=userinput) #Retrieves 5 most updated tweets from Twitter including the user input
+		cache[userinput]=result #Takes current cache definitions and adds term along with result to them
+		for tweet in cache[userinput]['statuses']: #Orders through the result tweets to retrieve the first 5 including the exact user input
+			if len(tweets)<5:
+				if userinput in tweet["text"]:
+					tweets.append(tweet)
+		returnobj = {userinput:tweets}
 		cachewrite = open("twittercache.json",'w')
-		json.dump(cache, cachewrite)
+		json.dump(cache, cachewrite) 
 		return returnobj
 
 
@@ -103,11 +110,10 @@ def uprint(*objects, sep=' ', end='\n', file=sys.stdout):
         print(*map(f, objects), sep=sep, end=end, file=file)
 
 exit=0
-while exit<3:
+while exit<3: #Loops three times asking user for input, calls function to cache or fetch and prints tweets and time
 	userinp = input("Enter Tweet term: ")
 	obj = graborcache(userinp)
-	print(obj[1])
-	for tweets in obj[0][userinp]:
+	for tweets in obj[userinp]:
 		print("\n")
 		uprint("TEXT: ",tweets['text'])
 		print("CREATED AT: ", tweets['created_at'],"\n\n")
