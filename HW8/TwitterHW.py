@@ -20,10 +20,10 @@ api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 # And we've provided the setup for your cache. But we haven't written any functions for you, so you have to be sure that any function that gets data from the internet relies on caching.
 CACHE_FNAME = "twitter_cache.json"
 try:
-    cache_file = open(CACHE_FNAME,'r')
-        cache_contents = cache_file.read()
-        cache_file.close()
-        CACHE_DICTION = json.loads(cache_contents)
+    cache_file = open("UMSItwittercache.json",'r')
+    cache_contents = cache_file.read()
+    cache_file.close()
+    CACHE_DICTION = json.loads(cache_contents)
 except:
     CACHE_DICTION = {}
 
@@ -34,10 +34,28 @@ except:
 
 
 def get_tweets():
-##YOUR CODE HERE
+	if CACHE_DICTION == {}:
+		UMSItweets = api.user_timeline(id="umsi",count=999)
+		UMSIsearchtweets = api.search(q="umsi")
+		UMSIsearchtweets = UMSIsearchtweets["statuses"]
+		CACHE_DICTION["search"] = UMSIsearchtweets
+		CACHE_DICTION["umsiuser"] = UMSItweets
+		cachewrite = open("UMSItwittercache.json",'w')
+		json.dump(CACHE_DICTION, cachewrite) 
+		cachewrite.close()
+	return CACHE_DICTION
+			
 
+import sys #Had unicode encoding errors 
+def uprint(*objects, sep=' ', end='\n', file=sys.stdout):
+    enc = file.encoding
+    if enc == 'UTF-8':
+        print(*objects, sep=sep, end=end, file=file)
+    else:
+        f = lambda obj: str(obj).encode(enc, errors='backslashreplace').decode(enc)
+        print(*map(f, objects), sep=sep, end=end, file=file)
 
-
+get_tweets()
 ## [PART 2]
 # Create a database: tweets.sqlite,
 # And then load all of those tweets you got from Twitter into a database table called Tweets, with the following columns in each row:
