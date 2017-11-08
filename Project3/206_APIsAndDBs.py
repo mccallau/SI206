@@ -66,20 +66,10 @@ except:
 
 
 # Define your function get_user_tweets here:
-def get_user_tweets(inp="umich"):
+def get_user_tweets(inp):
 	if inp not in cachedic:
 		tweets = api.user_timeline(id=inp,count=20)
-		newtweets=[]
-		for tweet in tweets:
-			if tweet["entities"]["user_mentions"]!=[]:
-				mentions = tweet["entities"]["user_mentions"]
-				mention = []
-				for user in mentions:
-					twus = api.get_user(user["id_str"])
-					mention.append(twus) #ALSO APPEND USER THAT POSTS
-				tweet["entities"]["user_mentions"] = mention
-			newtweets.append(tweet)
-		cachedic[inp] = newtweets
+		cachedic[inp] = tweets
 		cachefile = open(CACHE_FNAME,'w')
 		json.dump(cachedic,cachefile)
 		cachefile.close()
@@ -91,10 +81,8 @@ def get_user_tweets(inp="umich"):
 
 # Write an invocation to the function for the "umich" user timeline and 
 # save the result in a variable called umich_tweets:
-a = input("Input user to retrieve tweets from: ")
-if len(a)<1:
-	a="umich"
-umich_tweets = get_user_tweets(inp=a) #IT ONLY HAS UMSI in KEYS FOR SOME REASON
+
+umich_tweets = get_user_tweets("umich") 
 
 conn = sqlite3.connect('206_APIsAndDBs.sqlite')
 cur = conn.cursor()
@@ -109,10 +97,13 @@ cur = conn.cursor()
 
 cur.execute('DROP TABLE IF EXISTS Users')
 cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
+userdic={}
 for tweets in umich_tweets:
-	for users in tweets["entities"]["user_mentions"]:
-		tup=(users["id_str"],users["screen_name"],users["favourites_count"],users["description"])
-		cur.execute("INSERT OR IGNORE INTO Users (user_id,screen_name,num_favs,description) VALUES (?,?,?,?)",tup)
+	if "retweeted_status" in tweets:
+		userdic[tweets["retweeted_status"]["user"]["id_str"]]= [tweets["retweeted_status"]["user"]["screen_name"],tweets["retweeted_status"]["user"]["favourites_count"],tweets["retweeted_status"]["user"]["description"]]
+for k,v in userdic.items():
+	tup= (k,v[0],v[1],v[2])
+	cur.execute("INSERT OR IGNORE INTO Users (user_id,screen_name,num_favs,description) VALUES (?,?,?,?)",tup)
 
 
 ## You should load into the Tweets table: 
@@ -126,7 +117,6 @@ cur.execute("CREATE TABLE Tweets (tweet_id TEXT PRIMARY KEY,text TEXT,user_poste
 for tweets in umich_tweets:
 	tup=(tweets["id_str"],tweets["text"],tweets["user"]["id_str"],tweets["created_at"],tweets["retweet_count"])
 	cur.execute("INSERT OR IGNORE INTO Tweets (tweet_id,text,user_posted,time_posted,retweets) VALUES (?,?,?,?,?)",tup)
-
 
 ## HINT: There's a Tweepy method to get user info, so when you have a 
 ## user id or screenname you can find alllll the info you want about 
@@ -145,27 +135,45 @@ for tweets in umich_tweets:
 
 # Make a query to select all of the records in the Users database. 
 # Save the list of tuples in a variable called users_info.
-
-users_info = True
+sqlstr = "SELECT * FROM Users"
+q = []
+for obj in cur.execute(sqlstr):
+	q.append(obj)
+users_info = q
 
 # Make a query to select all of the user screen names from the database. 
 # Save a resulting list of strings (NOT tuples, the strings inside them!) 
 # in the variable screen_names. HINT: a list comprehension will make 
 # this easier to complete! 
-screen_names = True
+
+sqlstr = "SELECT screen_name FROM Users"
+q = []
+for obj in cur.execute(sqlstr):
+	q.append(str(obj[0]))
+screen_names = q
 
 
 # Make a query to select all of the tweets (full rows of tweet information)
 # that have been retweeted more than 10 times. Save the result 
 # (a list of tuples, or an empty list) in a variable called retweets.
-retweets = True
+
+sqlstr = "SELECT * FROM Tweets WHERE retweets>10"
+q = []
+for obj in cur.execute(sqlstr):
+	q.append(obj)
+retweets = q
 
 
 # Make a query to select all the descriptions (descriptions only) of 
 # the users who have favorited more than 500 tweets. Access all those 
 # strings, and save them in a variable called favorites, 
 # which should ultimately be a list of strings.
-favorites = True
+
+sqlstr = "SELECT description FROM Users WHERE num_favs>500"
+q = []
+for obj in cur.execute(sqlstr):
+	q.append(str(obj[0]))
+favorites = q
 
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 
