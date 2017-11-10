@@ -73,6 +73,15 @@ def get_user_tweets(inp):
 		cachefile = open(CACHE_FNAME,'w')
 		json.dump(cachedic,cachefile)
 		cachefile.close()
+		conn = sqlite3.connect('206_APIsAndDBs.sqlite')
+		cur = conn.cursor()
+		cur.execute('DROP TABLE IF EXISTS Tweets')
+		cur.execute("CREATE TABLE Tweets (tweet_id TEXT PRIMARY KEY,text TEXT,user_posted TEXT,time_posted DATETIME,retweets INTEGER,FOREIGN KEY(user_posted) REFERENCES Users(user_id))")
+		for tweets in cachedic[inp]:
+			tup=(tweets["id_str"],tweets["text"],tweets["user"]["id_str"],tweets["created_at"],tweets["retweet_count"])
+			cur.execute("INSERT OR IGNORE INTO Tweets (tweet_id,text,user_posted,time_posted,retweets) VALUES (?,?,?,?,?)",tup)
+		cur.execute('DROP TABLE IF EXISTS Users')
+		cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
 		return cachedic[inp]
 	else:
 		return cachedic[inp]
@@ -84,8 +93,6 @@ def get_user_tweets(inp):
 
 umich_tweets = get_user_tweets("umich") 
 
-conn = sqlite3.connect('206_APIsAndDBs.sqlite')
-cur = conn.cursor()
 
 ## Task 2 - Creating database and loading data into database
 ## You should load into the Users table:
@@ -95,8 +102,7 @@ cur = conn.cursor()
 # mentioned in the umich timeline, that Twitter user's info should be 
 # in the Users table, etc.
 
-cur.execute('DROP TABLE IF EXISTS Users')
-cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
+
 userdic={}
 userdic[umich_tweets[0]["user"]["id_str"]] = [umich_tweets[0]["user"]["screen_name"],umich_tweets[0]["user"]["favourites_count"],umich_tweets[0]["user"]["description"]]
 for tweets in umich_tweets:
@@ -119,11 +125,6 @@ for k,v in userdic.items():
 # NOTE: Be careful that you have the correct user ID reference in 
 # the user_id column! See below hints.
 
-cur.execute('DROP TABLE IF EXISTS Tweets')
-cur.execute("CREATE TABLE Tweets (tweet_id TEXT PRIMARY KEY,text TEXT,user_posted TEXT,time_posted DATETIME,retweets INTEGER,FOREIGN KEY(user_posted) REFERENCES Users(user_id))")
-for tweets in umich_tweets:
-	tup=(tweets["id_str"],tweets["text"],tweets["user"]["id_str"],tweets["created_at"],tweets["retweet_count"])
-	cur.execute("INSERT OR IGNORE INTO Tweets (tweet_id,text,user_posted,time_posted,retweets) VALUES (?,?,?,?,?)",tup)
 
 ## HINT: There's a Tweepy method to get user info, so when you have a 
 ## user id or screenname you can find alllll the info you want about 
