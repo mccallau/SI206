@@ -98,9 +98,16 @@ cur = conn.cursor()
 cur.execute('DROP TABLE IF EXISTS Users')
 cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
 userdic={}
+userdic[umich_tweets[0]["user"]["id_str"]] = [umich_tweets[0]["user"]["screen_name"],umich_tweets[0]["user"]["favourites_count"],umich_tweets[0]["user"]["description"]]
 for tweets in umich_tweets:
 	if "retweeted_status" in tweets:
-		userdic[tweets["retweeted_status"]["user"]["id_str"]]= [tweets["retweeted_status"]["user"]["screen_name"],tweets["retweeted_status"]["user"]["favourites_count"],tweets["retweeted_status"]["user"]["description"]]
+		if tweets["retweeted_status"]["user"]["id_str"] not in userdic:
+			userdic[tweets["retweeted_status"]["user"]["id_str"]]= [tweets["retweeted_status"]["user"]["screen_name"],tweets["retweeted_status"]["user"]["favourites_count"],tweets["retweeted_status"]["user"]["description"]]
+for tweets in umich_tweets:
+	if tweets["entities"]["user_mentions"] != []:
+		for users in tweets["entities"]["user_mentions"]:
+			if users["id_str"] not in userdic:
+				userdic[users["id_str"]]= [users["screen_name"],"",""]
 for k,v in userdic.items():
 	tup= (k,v[0],v[1],v[2])
 	cur.execute("INSERT OR IGNORE INTO Users (user_id,screen_name,num_favs,description) VALUES (?,?,?,?)",tup)
