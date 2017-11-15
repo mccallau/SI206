@@ -73,21 +73,40 @@ def get_user_tweets(inp):
 		cachefile = open(CACHE_FNAME,'w')
 		json.dump(cachedic,cachefile)
 		cachefile.close()
-		conn = sqlite3.connect('206_APIsAndDBs.sqlite')
-		cur = conn.cursor()
-		cur.execute('DROP TABLE IF EXISTS Tweets')
-		cur.execute("CREATE TABLE Tweets (tweet_id TEXT PRIMARY KEY,text TEXT,user_posted TEXT,time_posted DATETIME,retweets INTEGER,FOREIGN KEY(user_posted) REFERENCES Users(user_id))")
-		for tweets in cachedic[inp]:
+	conn = sqlite3.connect('206_APIsAndDBs.sqlite')
+	cur = conn.cursor()
+	cur.execute('DROP TABLE IF EXISTS Tweets')
+	cur.execute('DROP TABLE IF EXISTS Users')
+	cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
+	cur.execute("CREATE TABLE Tweets (tweet_id TEXT PRIMARY KEY,text TEXT,user_posted TEXT,time_posted DATETIME,retweets INTEGER,FOREIGN KEY(user_posted) REFERENCES Users(user_id))")
+	for users in cachedic.keys():
+		for tweets in cachedic[users]:
 			tup=(tweets["id_str"],tweets["text"],tweets["user"]["id_str"],tweets["created_at"],tweets["retweet_count"])
 			cur.execute("INSERT OR IGNORE INTO Tweets (tweet_id,text,user_posted,time_posted,retweets) VALUES (?,?,?,?,?)",tup)
-		cur.execute('DROP TABLE IF EXISTS Users')
-		cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
-		return cachedic[inp]
-	else:
-		return cachedic[inp]
+	userdic={}
+	for users in cachedic.keys():
+		userdic[cachedic[users][0]["user"]["id_str"]] = [cachedic[users][0]["user"]["screen_name"],cachedic[users][0]["user"]["favourites_count"],cachedic[users][0]["user"]["description"]]
+	for users in cachedic.keys():
+		for tweets in cachedic[users]:
+			if "retweeted_status" in tweets:
+				if tweets["retweeted_status"]["user"]["id_str"] not in userdic:
+					userdic[tweets["retweeted_status"]["user"]["id_str"]]= [tweets["retweeted_status"]["user"]["screen_name"],tweets["retweeted_status"]["user"]["favourites_count"],tweets["retweeted_status"]["user"]["description"]]
+	for users in cachedic.keys():
+		for tweets in cachedic[users]:
+			if tweets["entities"]["user_mentions"] != []:
+				for users in tweets["entities"]["user_mentions"]:
+					if users["id_str"] not in userdic:
+						userdic[users["id_str"]]= [users["screen_name"],"",""]
+	for k,v in userdic.items():
+		tup= (k,v[0],v[1],v[2])
+		cur.execute("INSERT OR IGNORE INTO Users (user_id,screen_name,num_favs,description) VALUES (?,?,?,?)",tup)
+	conn.commit()
+	cur.close()
+	return cachedic[inp]
 
 
-
+conn = sqlite3.connect('206_APIsAndDBs.sqlite')
+cur = conn.cursor()
 # Write an invocation to the function for the "umich" user timeline and 
 # save the result in a variable called umich_tweets:
 
@@ -101,22 +120,6 @@ umich_tweets = get_user_tweets("umich")
 # NOTE: For example, if the user with the "TedXUM" screen name is 
 # mentioned in the umich timeline, that Twitter user's info should be 
 # in the Users table, etc.
-
-
-userdic={}
-userdic[umich_tweets[0]["user"]["id_str"]] = [umich_tweets[0]["user"]["screen_name"],umich_tweets[0]["user"]["favourites_count"],umich_tweets[0]["user"]["description"]]
-for tweets in umich_tweets:
-	if "retweeted_status" in tweets:
-		if tweets["retweeted_status"]["user"]["id_str"] not in userdic:
-			userdic[tweets["retweeted_status"]["user"]["id_str"]]= [tweets["retweeted_status"]["user"]["screen_name"],tweets["retweeted_status"]["user"]["favourites_count"],tweets["retweeted_status"]["user"]["description"]]
-for tweets in umich_tweets:
-	if tweets["entities"]["user_mentions"] != []:
-		for users in tweets["entities"]["user_mentions"]:
-			if users["id_str"] not in userdic:
-				userdic[users["id_str"]]= [users["screen_name"],"",""]
-for k,v in userdic.items():
-	tup= (k,v[0],v[1],v[2])
-	cur.execute("INSERT OR IGNORE INTO Users (user_id,screen_name,num_favs,description) VALUES (?,?,?,?)",tup)
 
 
 ## You should load into the Tweets table: 
@@ -187,14 +190,23 @@ favorites = q
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
 # tweet. Save the resulting list of tuples in a variable called joined_data2.
-joined_data = True
+
+sqlstr="SELECT Users.screen_name,Tweets.text FROM Users INNER JOIN Tweets On Users.user_id=Tweets.user_posted"
+q = []
+for obj in cur.execute(sqlstr):
+	q.append(obj)
+joined_data = q
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
 # tweet in descending order based on retweets. Save the resulting 
 # list of tuples in a variable called joined_data2.
 
-joined_data2 = True
+sqlstr="SELECT Users.screen_name,Tweets.text FROM Users INNER JOIN Tweets On Users.user_id=Tweets.user_posted ORDER BY Tweets.retweets DESC"
+q = []
+for obj in cur.execute(sqlstr):
+	q.append(obj)
+joined_data2 = q
 
 
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END 
