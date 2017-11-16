@@ -17,14 +17,7 @@ import tweepy
 import twitter_info # same deal as always...
 import json
 import sqlite3
-import sys #Had unicode encoding errors 
-def uprint(*objects, sep=' ', end='\n', file=sys.stdout):
-    enc = file.encoding
-    if enc == 'UTF-8':
-        print(*objects, sep=sep, end=end, file=file)
-    else:
-        f = lambda obj: str(obj).encode(enc, errors='backslashreplace').decode(enc)
-        print(*map(f, objects), sep=sep, end=end, file=file)
+
 
 ## Your name: Austin McCall
 ## The names of anyone you worked with on this project:
@@ -66,9 +59,9 @@ except:
 
 
 # Define your function get_user_tweets here:
-def get_user_tweets(inp):
+def get_user_tweets(inp): #This function is called in unittesting, so the database must be opened and closed inside the function
 	if inp not in cachedic:
-		tweets = api.user_timeline(id=inp,count=20)
+		tweets = api.user_timeline(id=inp,count=20) #grabs 20 tweets from Twitter with the user screen_name or id input
 		cachedic[inp] = tweets
 		cachefile = open(CACHE_FNAME,'w')
 		json.dump(cachedic,cachefile)
@@ -79,25 +72,26 @@ def get_user_tweets(inp):
 	cur.execute('DROP TABLE IF EXISTS Users')
 	cur.execute("CREATE TABLE Users (user_id TEXT PRIMARY KEY,screen_name TEXT,num_favs INTEGER,description TEXT)")
 	cur.execute("CREATE TABLE Tweets (tweet_id TEXT PRIMARY KEY,text TEXT,user_posted TEXT,time_posted DATETIME,retweets INTEGER,FOREIGN KEY(user_posted) REFERENCES Users(user_id))")
-	for users in cachedic.keys():
+	for users in cachedic.keys(): #Writes tweets from the cache file into the Tweets table in the database
 		for tweets in cachedic[users]:
 			tup=(tweets["id_str"],tweets["text"],tweets["user"]["id_str"],tweets["created_at"],tweets["retweet_count"])
 			cur.execute("INSERT OR IGNORE INTO Tweets (tweet_id,text,user_posted,time_posted,retweets) VALUES (?,?,?,?,?)",tup)
-	userdic={}
-	for users in cachedic.keys():
+	userdic={} #Going to grab users from 3 different places, first the posting users, then the users that were retweeted, then the users that were just mentioned in the tweet
+	#Grab the mentioned users LAST because users that appear here do not have favorites or description information available, but they may appear in other areas (retweets or posting users) that have this information
+	for users in cachedic.keys(): #This grabs the users that posted tweets from the cache first, puts into a dict to ensure no repeats
 		userdic[cachedic[users][0]["user"]["id_str"]] = [cachedic[users][0]["user"]["screen_name"],cachedic[users][0]["user"]["favourites_count"],cachedic[users][0]["user"]["description"]]
-	for users in cachedic.keys():
+	for users in cachedic.keys(): #This grabs users that were retweeted from the cache, puts into a dict to ensure no repeats
 		for tweets in cachedic[users]:
 			if "retweeted_status" in tweets:
 				if tweets["retweeted_status"]["user"]["id_str"] not in userdic:
 					userdic[tweets["retweeted_status"]["user"]["id_str"]]= [tweets["retweeted_status"]["user"]["screen_name"],tweets["retweeted_status"]["user"]["favourites_count"],tweets["retweeted_status"]["user"]["description"]]
-	for users in cachedic.keys():
+	for users in cachedic.keys(): #This grabs users that were simply mentioned and not retweeted from the cache, puts into a dict to ensure no repeats
 		for tweets in cachedic[users]:
 			if tweets["entities"]["user_mentions"] != []:
 				for users in tweets["entities"]["user_mentions"]:
 					if users["id_str"] not in userdic:
 						userdic[users["id_str"]]= [users["screen_name"],"",""]
-	for k,v in userdic.items():
+	for k,v in userdic.items(): #This writes all the users that were gathered in userdic to the Users table in the DB
 		tup= (k,v[0],v[1],v[2])
 		cur.execute("INSERT OR IGNORE INTO Users (user_id,screen_name,num_favs,description) VALUES (?,?,?,?)",tup)
 	conn.commit()
