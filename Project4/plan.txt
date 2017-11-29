@@ -1,0 +1,3 @@
+1. APIs I plan to use: Facebook, Yelp, US Census Bureau, Dark Sky, Google Maps
+2. plotly, pandas, and possibly matplotlib
+3. Dates, post/check-in, and location data available on Facebook. Combining that data with weather data, Yelp reviews for places I visited, and census data. Using Google Maps API for location data support.
